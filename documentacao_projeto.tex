@@ -285,7 +285,7 @@ ImportError: cannot import name 'url_quote' from 'werkzeug.urls'
 
 \subsection{Etapa 7: O Gran Finale -- Relatórios de Negócio Respondendo 100\%}
 \textbf{O desafio:} Abrimos a porta 5153 e disparamos requisições de teste. Após adicionar parênteses em \texttt{get\_daily\_visits()} no \texttt{app.py}, ambas as rotas retornaram dados completos:
-\begin{lstlisting}[language=json]
+\begin{lstlisting}
 {"2023-02-07":40,"2023-02-08":202,"2023-02-09":179,"2023-02-10":158,...}
 \end{lstlisting}
 O microsserviço consultou com sucesso os 500 usuários e tokens no PostgreSQL e entregou os relatórios analíticos em JSON formatado!
