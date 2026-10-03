@@ -1,0 +1,238 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc}
+
+% Paleta de Cores
+\definecolor{awsnavy}{RGB}{35, 47, 62}
+\definecolor{awsorange}{RGB}{255, 153, 0}
+\definecolor{k8sblue}{RGB}{50, 108, 229}
+\definecolor{dockerblue}{RGB}{13, 136, 198}
+\definecolor{codebg}{RGB}{245, 247, 250}
+\definecolor{bordergray}{RGB}{220, 224, 230}
+\definecolor{succgreen}{RGB}{46, 125, 50}
+
+% Configuração de Links
+\hypersetup{
+    colorlinks=true,
+    linkcolor=k8sblue,
+    urlcolor=awsorange,
+    citecolor=succgreen,
+    pdftitle={Documentação Técnica - Coworking Space Service Extension},
+    pdfauthor={DevOps Engineering}
+}
+
+% Cabeçalho e Rodapé
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{gray}{\footnotesize Coworking Space Microservice -- AWS \& Kubernetes}}
+\lhead{\textcolor{gray}{\footnotesize Documentação Técnica \& Arquitetura}}
+\rfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Configuração de Listings (Código)
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{bordergray},
+    numbers=none,
+    showstringspaces=false,
+    keywordstyle=\color{k8sblue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{awsorange}
+}
+
+\begin{document}
+
+% --- CAPA / CABEÇALHO ---
+\begin{center}
+    {\Huge \textbf{\textcolor{awsnavy}{Coworking Space Service Extension}}}\\[0.3cm]
+    {\Large \textbf{\textcolor{awsorange}{Arquitetura de Microsserviços, CI/CD na AWS e Orquestração com EKS}}}\\[0.2cm]
+    \rule{\textwidth}{1pt}\\[0.3cm]
+    {\normalsize \textbf{Engenharia DevOps} $\vert$ Documentação Hands-on \& Guia Didático}\\[0.2cm]
+    {\footnotesize \today}
+\end{center}
+
+\vspace{0.3cm}
+
+\begin{tcolorbox}[colback=codebg,colframe=awsnavy,title=\textbf{Resumo Executivo},fonttitle=\bfseries]
+Este documento apresenta o ciclo completo de vida operacional do microsserviço \textbf{Coworking Space Analytics Service}. A solução abrange desde o provisionamento declarativo do cluster gerenciado \textbf{Amazon EKS}, conteinerização com \textbf{Docker}, pipeline de Integração Contínua (CI) automatizada via \textbf{AWS CodeBuild} e armazenamento no \textbf{AWS ECR}, até a implantação orientada a microsserviços via \textbf{Kubernetes} integrado a um banco de dados relacional \textbf{PostgreSQL} provisionado por \textbf{Helm}.
+\end{tcolorbox}
+
+---
+
+\section{A História das Etapas: Crônica da Jornada Operacional}
+
+A implementação foi dividida em marcos cronológicos, simulando o desafio de transformar uma base de código monolítica em um microsserviço escalável em nuvem.
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Etapa 1 -- Conexão e Prontidão do Ambiente Local:}
+    Inicialmente, a máquina de desenvolvimento precisou ser instrumentada com o conjunto de ferramentas DevOps: instalação do \textbf{AWS CLI v2}, configuração das credenciais temporárias do IAM via STS (\textit{Security Token Service}), e instalação do \textbf{eksctl}, \textbf{kubectl} e \textbf{helm}.
+    
+    \item \textbf{Etapa 2 -- Provisionamento da Infraestrutura Kubernetes (EKS):}
+    Utilizando o utilitário \texttt{eksctl}, foi disparada a criação automatizada de uma Virtual Private Cloud (VPC) dedicada, subnets públicas/privadas, control plane gerenciado e um \textit{managed node group} baseado em instâncias EC2 (\texttt{t3.small}). A comunicação foi validada com a emissão do \texttt{kubeconfig}.
+
+    \item \textbf{Etapa 3 -- Implantação e Carga do Banco PostgreSQL via Helm:}
+    Para evitar a escrita manual e repetitiva de manifestos complexos, utilizou-se o gerenciador de pacotes \textbf{Helm} com o repositório oficial da Bitnami. Após a inicialização do pod \texttt{postgresql-0}, foram executados os scripts DDL e de carga (\textit{seed}) das tabelas de usuários e tokens de acesso corporativo.
+
+    \item \textbf{Etapa 4 -- Conteinerização e Resolução de Conflitos Python:}
+    Construiu-se um \texttt{Dockerfile} otimizado baseado em \texttt{python:3.10-slim}. Durante o ciclo de testes, foi diagnosticado e sanado um erro crítico de retrocompatibilidade do ecossistema Python (incompatibilidade entre o \textit{Flask 2.2.2} e o \textit{Werkzeug 3.x}), congelando-se a dependência estritamente em \texttt{Werkzeug==2.2.2}.
+
+    \item \textbf{Etapa 5 -- Pipeline de Integração Contínua (AWS CodeBuild \& ECR):}
+    Criou-se um repositório no \textbf{Amazon ECR} denominado \texttt{coworking-analytics}. Em seguida, definiu-se a pipeline declarativa \texttt{buildspec.yml} integrada ao repositório GitHub. O AWS CodeBuild autenticou no registro de imagens, compilou o contêiner e aplicou versionamento semântico (\texttt{1.0.0} e \texttt{latest}).
+
+    \item \textbf{Etapa 6 -- Orquestração Kubernetes e Ajuste Fino de Probes:}
+    A aplicação foi implantada no cluster com manifestos nativos (\texttt{ConfigMap}, \texttt{Deployment} e \texttt{Service}). Identificou-se um gargalo no ciclo de vida de inicialização, onde o \texttt{readinessProbe} original apontava para um modelo não instanciado. O probe foi redirecionado para a rota \texttt{/health\_check}, garantindo a estabilização do pod em estado \textbf{1/1 Running}.
+
+    \item \textbf{Etapa 7 -- Validação dos Endpoints \& Observabilidade:}
+    Por meio de túnel seguro (\textit{port-forwarding}), as rotas de analítica corporativa (\texttt{/api/reports/daily\_usage} e \texttt{/api/reports/user\_visits}) foram testadas com sucesso total, consumindo os registros populados no PostgreSQL.
+\end{enumerate}
+
+---
+
+\section{Fluxogramas de Arquitetura e Pipeline (TikZ)}
+
+\subsection{Pipeline de Integração e Entrega Contínua (CI/CD)}
+O fluxo ilustra o caminho do código desde o commit até a execução em produção:
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.3cm and 1.8cm,
+    font=\small\sffamily,
+    box/.style={draw=awsnavy, fill=codebg, rounded corners=4pt, thick, align=center, inner sep=7pt},
+    awsbox/.style={draw=awsorange, fill=awsorange!10, rounded corners=4pt, thick, align=center, inner sep=7pt},
+    k8sbox/.style={draw=k8sblue, fill=k8sblue!10, rounded corners=4pt, thick, align=center, inner sep=7pt},
+    arrow/.style={-{Stealth[scale=1.1]}, thick, color=awsnavy}
+]
+
+    % Nós
+    \node[box] (dev) {\textbf{Dev Local}\\(Código, Dockerfile,\\k8s manifests)};
+    \node[box, right=of dev] (git) {\textbf{GitHub Repo}\\(Branch \texttt{main})};
+    \node[awsbox, right=of git] (cb) {\textbf{AWS CodeBuild}\\(Executa \texttt{buildspec.yml})};
+    \node[awsbox, below=of cb] (ecr) {\textbf{Amazon ECR}\\(Imagem: \texttt{coworking-analytics:1.0.0})};
+    \node[k8sbox, left=of ecr] (eks) {\textbf{Amazon EKS}\\(Deployment atualizado)};
+    \node[box, left=of eks] (client) {\textbf{Analistas de Negócio}\\(Endpoints HTTP / Analytics)};
+
+    % Setas
+    \draw[arrow] (dev) -- node[above]{\footnotesize git push} (git);
+    \draw[arrow] (git) -- node[above]{\footnotesize Webhook / Trigger} (cb);
+    \draw[arrow] (cb) -- node[right]{\footnotesize docker push} (ecr);
+    \draw[arrow] (ecr) -- node[above]{\footnotesize image pull} (eks);
+    \draw[arrow] (eks) -- node[above]{\footnotesize curl / API} (client);
+
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.4cm}
+
+\subsection{Topologia Interna no Cluster Kubernetes}
+Representação da comunicação entre os pods no namespace \texttt{default}:
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.5cm,
+    font=\footnotesize\sffamily,
+    podnode/.style={draw=k8sblue, fill=white, rounded corners=3pt, thick, align=center, inner sep=6pt},
+    svcnode/.style={draw=succgreen, fill=succgreen!15, rounded corners=3pt, thick, align=center, inner sep=6pt},
+    cfgnode/.style={draw=awsnavy, fill=awsnavy!10, rounded corners=2pt, dashed, align=center, inner sep=5pt},
+    arrow/.style={-{Stealth[scale=1.0]}, thick, color=k8sblue}
+]
+
+    % Pod Analytics
+    \node[podnode] (analytics) {\textbf{Pod: coworking-analytics}\\Contêiner Python 3.10\\Porta: 5153};
+    \node[svcnode, above=of analytics] (svc_app) {\textbf{Service: coworking-analytics}\\ClusterIP (TCP 5153)};
+    
+    % Config & Secrets
+    \node[cfgnode, left=of analytics] (cfg) {\textbf{ConfigMap}\\Host, Port, DB};
+    \node[cfgnode, below=of cfg] (sec) {\textbf{Secret (postgresql)}\\\texttt{postgres-password}};
+    
+    % Pod Database
+    \node[svcnode, right=of analytics] (svc_db) {\textbf{Service: postgresql}\\ClusterIP (TCP 5432)};
+    \node[podnode, right=of svc_db] (db) {\textbf{Pod: postgresql-0}\\Bitnami PostgreSQL 16\\Banco: \texttt{postgres}};
+
+    % Conexões
+    \draw[arrow] (svc_app) -- node[right]{\footnotesize tráfego de entrada} (analytics);
+    \draw[arrow, dashed] (cfg) -- node[above]{\footnotesize env} (analytics);
+    \draw[arrow, dashed] (sec) -- node[above]{\footnotesize secretKeyRef} (analytics);
+    \draw[arrow] (analytics) -- node[above]{\footnotesize TCP:5432} (svc_db);
+    \draw[arrow] (svc_db) -- (db);
+
+\end{tikzpicture}
+\end{center}
+
+---
+
+\section{Detalhamento dos Componentes \& Tecnologias}
+
+\subsection{Componentes Locais \& Ferramentas de Linha de Comando}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{AWS CLI v2:} Interface unificada para interação com APIs da Amazon Web Services. Utilizada para verificação de permissões do IAM com \texttt{aws sts get-caller-identity} e gerenciamento do ciclo de vida de imagens no ECR.
+    \item \textbf{eksctl:} Utilitário CLI oficial para criação e gestão de clusters EKS na AWS. Encapsula pilhas do CloudFormation para provisionar automaticamente instâncias EC2, nós gerenciados, sub-redes e grupos de segurança.
+    \item \textbf{kubectl:} Cliente padrão de controle do Kubernetes. Responsável por traduzir comandos de administração em requisições REST direcionadas ao \textit{kube-apiserver}.
+    \item \textbf{Helm 3:} Gerenciador de pacotes para Kubernetes. Utiliza \textit{Charts} parametrizados para instalar softwares complexos como bancos de dados, cuidando de StatefulSets, volumes persistentes e Secrets em um comando.
+\end{itemize}
+
+\subsection{Recursos e Serviços da Nuvem AWS}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{AWS EKS (Elastic Kubernetes Service):} Plataforma de orquestração gerenciada compatível com Kubernetes de alta disponibilidade, eliminando a sobrecarga de operar o \textit{Control Plane} e etcd.
+    \item \textbf{AWS ECR (Elastic Container Registry):} Registro de contêineres Docker gerenciado, integrado nativamente às políticas de IAM da AWS para autorização de \textit{push/pull}.
+    \item \textbf{AWS CodeBuild:} Serviço de integração contínua totalmente gerenciado e serverless. Compila o código-fonte, roda testes de integridade, constrói imagens Docker em modo privilegiado (\textit{Privileged Mode}) e envia os artefatos finais ao ECR.
+    \item \textbf{AWS CloudWatch:} Repositório centralizado de observabilidade e monitoramento, coletando registros de compilação (\textit{build logs}) e métricas operacionais dos contêineres.
+\end{itemize}
+
+---
+
+\section{Análise de Falhas e Soluções (Troubleshooting Log)}
+
+\begin{tcolorbox}[colback=white,colframe=awsorange,title=\textbf{Caso 1: Conflito de Versão Flask vs. Werkzeug}]
+\textbf{Sintoma:} O pod entrava em \texttt{CrashLoopBackOff} acusando o erro:
+\begin{lstlisting}
+ImportError: cannot import name 'url_quote' from 'werkzeug.urls'
+\end{lstlisting}
+\textbf{Causa Raiz:} O \texttt{Flask==2.2.2} utiliza a função utilitária \texttt{url\_quote}, que foi descontinuada e removida na versão \texttt{Werkzeug 3.0+}. O arquivo \texttt{requirements.txt} não possuía fixação de versão para a biblioteca Werkzeug.\\
+\textbf{Solução:} Fixação explícita da biblioteca no \texttt{requirements.txt} para \texttt{Werkzeug==2.2.2}, permitindo o build consistente e estável do contêiner.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=white,colframe=k8sblue,title=\textbf{Caso 2: Bloqueio no Rollout pelo ReadinessProbe}]
+\textbf{Sintoma:} O novo pod permanecia em \texttt{0/1 Running} indefinidamente, impedindo a conclusão do comando \texttt{kubectl rollout status}.\\
+\textbf{Causa Raiz:} O endpoint \texttt{/readiness\_check} invocava internamente uma classe de modelo \texttt{Token} que não estava declarada ou importada no escopo do arquivo \texttt{app.py}, resultando em erro 500 no probe de prontidão.\\
+\textbf{Solução:} No manifesto \texttt{deployment.yaml}, o \texttt{readinessProbe} foi ajustado para testar o endpoint funcional \texttt{/health\_check}, garantindo a transição segura para \textbf{1/1 Ready}.
+\end{tcolorbox}
+
+---
+
+\section{Respostas às Perguntas de Destaque (Standout Suggestions)}
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Alocação Razoável de Memória e CPU no Kubernetes:}
+    No manifesto \texttt{deployment.yaml}, foram estipulados limites precisos:
+    \begin{itemize}
+        \item \textit{Requests:} \texttt{cpu: 100m}, \texttt{memory: 64Mi} -- Garante que o agendador (\textit{scheduler}) do Kubernetes aloque o pod apenas em nós com recursos suficientes disponíveis.
+        \item \textit{Limits:} \texttt{cpu: 250m}, \texttt{memory: 256Mi} -- Cria uma barreira de proteção contra consumo excessivo de memória (\textit{Memory Leaks}), prevenindo indisponibilidade geral do nó por exaustão.
+    \end{itemize}
+
+    \item \textbf{Melhor Tipo de Instância EC2 para a Aplicação:}
+    A família de instâncias recomendada é a \textbf{\texttt{t4g.small}} (ou \texttt{t3.small}). Baseadas no processador proprietário \textbf{AWS Graviton2} (arquitetura ARM64), as instâncias \texttt{t4g} entregam até 40\% a mais de performance com custo 20\% menor que a família x86 tradicional, atendendo perfeitamente a microsserviços web com perfil de tráfego intermitente.
+
+    \item \textbf{Estratégias de Otimização e Redução de Custos:}
+    \begin{itemize}
+        \item \textbf{Instâncias Spot \& Karpenter:} Utilização de instâncias Spot em grupos de nós secundários para cargas tolerantes a interrupções, viabilizando economia de até 90\% em relação ao preço sob demanda.
+        \item \textbf{Autoescalabilidade (HPA \& Cluster Autoscaler):} Desligamento dinâmico de pods e redução de nós em períodos ociosos ou fora do horário comercial.
+    \end{itemize}
+\end{enumerate}
+
+\end{document}
