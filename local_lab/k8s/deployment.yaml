@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-coworking-analytics
+  labels:
+    app: local-coworking-analytics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-coworking-analytics
+  template:
+    metadata:
+      labels:
+        app: local-coworking-analytics
+    spec:
+      containers:
+      - name: analytics
+        image: coworking-analytics:local
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5153
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: local-analytics-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: local-analytics-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: local-analytics-config
+              key: DB_NAME
+        - name: DB_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: local-analytics-config
+              key: DB_USERNAME
+        - name: APP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: local-analytics-config
+              key: APP_PORT
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: local-postgres-secret
+              key: postgres-password
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health_check
+            port: 5153
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health_check
+            port: 5153
+          initialDelaySeconds: 10
+          periodSeconds: 10

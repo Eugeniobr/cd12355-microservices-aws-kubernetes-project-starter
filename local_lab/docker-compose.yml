@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # 1. Banco de Dados PostgreSQL Local
+  db:
+    image: postgres:16-alpine
+    container_name: local-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localpassword123
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432" # Expõe na porta 5433 local para evitar conflito com qualquer PostgreSQL na máquina
+    volumes:
+      # Os scripts da pasta db/ rodam automaticamente ao iniciar o banco pela primeira vez!
+      - ../db/1_create_tables.sql:/docker-entrypoint-initdb.d/1_create_tables.sql
+      - ../db/2_seed_users.sql:/docker-entrypoint-initdb.d/2_seed_users.sql
+      - ../db/3_seed_tokens.sql:/docker-entrypoint-initdb.d/3_seed_tokens.sql
+
+  # 2. Microsserviço de Analytics em Python
+  analytics:
+    build:
+      context: ../analytics
+      dockerfile: Dockerfile
+    container_name: local-coworking-analytics
+    restart: always
+    ports:
+      - "5153:5153"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USERNAME: postgres
+      DB_PASSWORD: localpassword123
+      APP_PORT: 5153
+    depends_on:
+      - db
