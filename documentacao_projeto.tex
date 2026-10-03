@@ -3,7 +3,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[brazil]{babel}
-\usepackage[margin=2.0cm]{geometry}
+\usepackage[margin=1.9cm]{geometry}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{listings}
@@ -13,17 +13,17 @@
 \usepackage{enumitem}
 \usepackage{tcolorbox}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc, decorations.pathreplacing}
 
-% Paleta de Cores Didática
+% Paleta de Cores
 \definecolor{awsnavy}{RGB}{35, 47, 62}
 \definecolor{awsorange}{RGB}{255, 153, 0}
 \definecolor{k8sblue}{RGB}{50, 108, 229}
-\definecolor{dockerturquoise}{RGB}{13, 136, 198}
 \definecolor{codebg}{RGB}{248, 249, 251}
 \definecolor{bordergray}{RGB}{215, 220, 228}
 \definecolor{succgreen}{RGB}{46, 125, 50}
 \definecolor{tipcolor}{RGB}{102, 51, 153}
+\definecolor{wirecolor}{RGB}{180, 80, 0}
 
 % Configuração de Links
 \hypersetup{
@@ -31,14 +31,14 @@
     linkcolor=k8sblue,
     urlcolor=awsorange,
     citecolor=succgreen,
-    pdftitle={Guia Didático DevOps: Do SQL ao Kubernetes na AWS},
+    pdftitle={Guia Didático DevOps: Arquitetura e Conexões de Componentes},
     pdfauthor={Eugênio}
 }
 
 % Cabeçalho e Rodapé
 \pagestyle{fancy}
 \fancyhf{}
-\rhead{\textcolor{gray}{\footnotesize Guia Didático: Da Análise de Dados à Nuvem}}
+\rhead{\textcolor{gray}{\footnotesize Guia Didático: Como os Componentes se Conectam}}
 \lhead{\textcolor{gray}{\footnotesize Coworking Analytics -- DevOps \& Kubernetes}}
 \rfoot{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -62,7 +62,7 @@
 % --- CAPA / CABEÇALHO ---
 \begin{center}
     {\Huge \textbf{\textcolor{awsnavy}{Do Script Python ao Kubernetes na AWS}}}\\[0.25cm]
-    {\Large \textbf{\textcolor{awsorange}{Um Guia Didático e Descomplicado de DevOps e Cloud}}}\\[0.2cm]
+    {\Large \textbf{\textcolor{awsorange}{A Anatomia das Conexões: Como Cada Peça se Comunica}}}\\[0.2cm]
     {\normalsize \textbf{Estudo de Caso Prático: API de Analytics do Coworking Space}}\\[0.2cm]
     \rule{\textwidth}{1.2pt}\\[0.25cm]
     {\footnotesize \textbf{Autor:} Eugênio $\vert$ \textbf{Público-Alvo:} Analistas de Dados, Desenvolvedores e Iniciantes em Nuvem $\vert$ \today}
@@ -70,179 +70,253 @@
 
 \vspace{0.2cm}
 
-\begin{tcolorbox}[colback=codebg,colframe=awsnavy,title=\textbf{Prefácio: O que este guia resolve?},fonttitle=\bfseries]
-Se você vem da área de \textbf{Análise de Dados}, seu dia a dia geralmente envolve consultas SQL, manipulação de DataFrames com Pandas, criação de modelos e geração de relatórios. No entanto, quando essa análise precisa ser disponibilizada para centenas de pessoas como uma API rápida e estável, entramos no mundo de \textbf{DevOps e Engenharia de Nuvem}.
+\begin{tcolorbox}[colback=codebg,colframe=awsnavy,title=\textbf{Prefácio: O Enigma da Conectividade em Nuvem},fonttitle=\bfseries]
+Quando vemos um diagrama de arquitetura de nuvem pela primeira vez, ele pode parecer uma coleção de caixas isoladas com nomes misteriosos: Docker, CodeBuild, ECR, EKS, Pods, Services. 
 
-Este documento conta, passo a passo e sem jargões desnecessários, como pegamos uma aplicação em Python que consulta um banco PostgreSQL e a transformamos em uma solução profissional, resiliente e 100\% automatizada na \textbf{Amazon Web Services (AWS)} utilizando \textbf{Docker}, \textbf{Kubernetes (EKS)} e \textbf{Pipelines de CI/CD}.
+O segredo para dominar DevOps e entender a infraestrutura moderna é responder a uma pergunta simples: \textbf{``Como o componente A conversa com o componente B?''}. Quem autentica quem? Qual porta é utilizada? Como um contêiner encontra um banco de dados sem saber o IP fixo dele?
+
+Este documento expande nossa jornada técnica anterior, detalhando a \textbf{fiação invisível} que conecta cada ferramenta da AWS e cada recurso do Kubernetes, acompanhado de fluxogramas com legendas detalhadas de funções e protocolos.
 \end{tcolorbox}
 
 ---
 
 \section{O Mapa Mental dos Conceitos (Analogias do Mundo Real)}
 
-Antes de mergulhar nos comandos, vamos traduzir os termos técnicos de DevOps para conceitos intuitivos:
+Para quem vem do ecossistema de dados (Python, SQL, Pandas), veja a correspondência direta de cada tecnologia:
 
 \begin{itemize}[leftmargin=*]
-    \item \textbf{Docker (O Contêiner):} Imagine que você criou um script Python no Jupyter Notebook com bibliotecas específicas e precisa mandar para um colega. Se o colega tiver outra versão do Python ou do Windows, tudo quebra. O Docker é uma ``marmita lacrada'' (contêiner) que carrega o seu código, a versão exata do Python, as bibliotecas do \texttt{requirements.txt} e até o sistema operacional mínimo. Onde essa marmita for aberta (no seu notebook, no servidor do chefe ou na nuvem), o script roda exatamente da mesma forma.
-    
-    \item \textbf{AWS ECR (O Armazém de Imagens):} É como um repositório seguro no Google Drive ou GitHub, mas específico para guardar essas ``marmitas lacradas'' (imagens Docker) prontas para serem usadas.
-    
-    \item \textbf{AWS CodeBuild (A Linha de Montagem / CI):} Em vez de você ficar compilando a imagem no seu computador toda vez que mudar uma linha de código, o CodeBuild é um computador descartável na nuvem que baixa seu código do GitHub, prepara a imagem Docker e a coloca no armazém (ECR) automaticamente.
-    
-    \item \textbf{Kubernetes (O Maestro da Orquestra):} Se sua marmita (contêiner) travar de madrugada ou se o servidor queimar, quem acorda para reiniciar? O Kubernetes. Ele monitora a saúde das aplicações, divide o trabalho entre computadores e garante que, se um processo morrer, outro seja criado em questão de segundos sem ninguém perceber.
-    
-    \item \textbf{AWS EKS (A Infraestrutura do Maestro):} É o serviço da AWS que monta toda a sala de máquinas do Kubernetes para você com segurança e alta disponibilidade.
-    
-    \item \textbf{Helm (O Instalador de Pacotes do Kubernetes):} Pense no Helm como o \texttt{pip} do Python ou o \texttt{apt} do Linux, só que para infraestrutura. Em vez de escrever 300 linhas de configuração para subir um banco PostgreSQL, você roda um único comando do Helm e o banco sobe completo.
+    \item \textbf{Docker (A Marmita Lacrada):} É um ambiente virtual auto-suficiente. Ele carrega seu código Python, suas bibliotecas e o sistema operacional mínimo para garantir que o script rode idêntico em qualquer servidor do planeta, eliminando o clássico ``na minha máquina funciona''.
+    \item \textbf{AWS ECR (O Almoxarifado de Imagens):} Repositório privado da AWS onde as imagens Docker empacotadas são guardadas com tags de versão (\texttt{1.0.0}, \texttt{latest}).
+    \item \textbf{AWS CodeBuild (A Linha de Montagem / CI):} Servidor descartável na nuvem que, a cada novo código no GitHub, compila a imagem Docker e a envia ao ECR sem que você precise gastar a CPU do seu computador pessoal.
+    \item \textbf{Kubernetes / EKS (O Maestro da Orquestra):} Gerencia os servidores e contêineres. Se o pod da aplicação cair por consumo excessivo de memória, o Kubernetes o recria imediatamente sem indisponibilidade para os usuários.
+    \item \textbf{Helm (O Pip da Infraestrutura):} Em vez de escrever centenas de linhas de configuração manual para instalar um banco PostgreSQL, o Helm instala tudo com uma única instrução pronta da comunidade.
 \end{itemize}
 
 ---
 
-\section{Fluxogramas Didáticos do Sistema}
+\section{Fluxogramas com Legendas de Funções e Conectividade}
 
-\subsection{Fluxo 1: A Linha de Montagem da Aplicação (Pipeline CI/CD)}
-O diagrama abaixo explica o que acontece nos bastidores quando uma alteração no código é feita:
+\subsection{Fluxograma 1: A Linha de Montagem e Desdobramento (Pipeline CI/CD)}
+O diagrama a seguir rastreia o ciclo de vida do código, identificando o canal e o protocolo de cada conexão:
 
 \begin{center}
 \begin{tikzpicture}[
-    node distance=1.0cm and 1.2cm,
+    node distance=1.1cm and 1.3cm,
     font=\footnotesize\sffamily,
-    stepbox/.style={draw=awsnavy, fill=white, rounded corners=5pt, thick, align=center, inner sep=6pt, text width=2.4cm},
-    cloudbox/.style={draw=awsorange, fill=awsorange!12, rounded corners=5pt, thick, align=center, inner sep=6pt, text width=2.6cm},
-    k8sbox/.style={draw=k8sblue, fill=k8sblue!12, rounded corners=5pt, thick, align=center, inner sep=6pt, text width=2.6cm},
+    stepbox/.style={draw=awsnavy, fill=white, rounded corners=4pt, thick, align=center, inner sep=6pt, text width=2.5cm},
+    cloudbox/.style={draw=awsorange, fill=awsorange!12, rounded corners=4pt, thick, align=center, inner sep=6pt, text width=2.6cm},
+    k8sbox/.style={draw=k8sblue, fill=k8sblue!12, rounded corners=4pt, thick, align=center, inner sep=6pt, text width=2.6cm},
     arrow/.style={-{Stealth[scale=1.1]}, thick, color=awsnavy}
 ]
 
-    \node[stepbox] (dev) {\textbf{1. Desenvolvedor}\\Escreve código e dá \texttt{git push}};
-    \node[stepbox, right=of dev] (github) {\textbf{2. GitHub}\\Recebe o código com o \texttt{buildspec.yml}};
-    \node[cloudbox, right=of github] (codebuild) {\textbf{3. AWS CodeBuild}\\Compila o Docker e roda os testes};
+    \node[stepbox] (dev) {\textbf{[1] Dev Local}\\Edita código Python,\\Dockerfile e YAMLs};
+    \node[stepbox, right=of dev] (git) {\textbf{[2] GitHub}\\Repositório central com \texttt{buildspec.yml}};
+    \node[cloudbox, right=of git] (cb) {\textbf{[3] AWS CodeBuild}\\Ambiente efêmero de compilação};
     
-    \node[cloudbox, below=1.2cm of codebuild] (ecr) {\textbf{4. AWS ECR}\\Armazena a imagem \texttt{v1.0.0}};
-    \node[k8sbox, left=of ecr] (eks) {\textbf{5. Kubernetes (EKS)}\\Atualiza o Pod com a nova imagem};
-    \node[stepbox, left=of eks] (client) {\textbf{6. Usuário Final}\\Consome os dados via \texttt{curl} ou Dashboard};
+    \node[cloudbox, below=1.3cm of cb] (ecr) {\textbf{[4] Amazon ECR}\\Catálogo de contêineres registrados};
+    \node[k8sbox, left=of ecr] (eks) {\textbf{[5] Amazon EKS}\\Cluster com nós EC2 orquestrados};
+    \node[stepbox, left=of eks] (client) {\textbf{[6] Analista / Cliente}\\Consumo de relatórios via HTTP};
 
-    \draw[arrow] (dev) -- (github);
-    \draw[arrow] (github) -- (codebuild);
-    \draw[arrow] (codebuild) -- (ecr);
-    \draw[arrow] (ecr) -- (eks);
-    \draw[arrow] (eks) -- (client);
+    \draw[arrow] (dev) -- node[above]{\footnotesize (A) Git/SSH} (git);
+    \draw[arrow] (git) -- node[above]{\footnotesize (B) OAuth/Hook} (cb);
+    \draw[arrow] (cb) -- node[right]{\footnotesize (C) Docker Push} (ecr);
+    \draw[arrow] (ecr) -- node[above]{\footnotesize (D) Image Pull} (eks);
+    \draw[arrow] (eks) -- node[above]{\footnotesize (E) Port-Forward} (client);
 
 \end{tikzpicture}
+\end{center}
+
+\vspace{0.2cm}
+
+\subsubsection*{Legenda da Linha de Montagem (Como Cada Peça se Conecta)}
+\begin{center}
+\small
+\begin{tabular}{p{0.8cm} p{3.2cm} p{4.2cm} p{7.0cm}}
+\toprule
+\textbf{Ref.} & \textbf{De $\rightarrow$ Para} & \textbf{Protocolo / Mecanismo} & \textbf{O que acontece nesta conexão?} \\
+\midrule
+\textbf{(A)} & Dev $\rightarrow$ GitHub & Git over HTTPS (porta 443) & O desenvolvedor envia os códigos do app e o arquivo \texttt{buildspec.yml} para a nuvem. \\
+\textbf{(B)} & GitHub $\rightarrow$ CodeBuild & Webhook / GitHub App & O CodeBuild detecta a nova versão e baixa o repositório para sua máquina de compilação. \\
+\textbf{(C)} & CodeBuild $\rightarrow$ ECR & Docker Login + HTTPS (443) & O CodeBuild obtém um token com \texttt{aws ecr get-login-password} e envia a imagem gerada. \\
+\textbf{(D)} & EKS $\rightarrow$ ECR & IAM Role do Nó (HTTPS 443) & O nó do EKS autentica na AWS e faz o download seguro da imagem para iniciar os contêineres. \\
+\textbf{(E)} & EKS $\rightarrow$ Analista & Túnel TCP (Port-Forward 5153) & O analista acessa a API interna através de um túnel seguro aberto pelo \texttt{kubectl}. \\
+\bottomrule
+\end{tabular}
 \end{center}
 
 \vspace{0.3cm}
 
-\subsection{Fluxo 2: Como os Dados Chegam ao Analista (Arquitetura Interna)}
-Como o tráfego navega de dentro do cluster até o banco de dados PostgreSQL:
+\subsection{Fluxograma 2: A Rede Interna do Kubernetes e o Caminho dos Dados}
+O diagrama abaixo detalha como a requisição de analytics viaja dentro do cluster até o banco de dados:
 
 \begin{center}
 \begin{tikzpicture}[
-    node distance=1.1cm and 1.6cm,
+    node distance=1.1cm and 1.5cm,
     font=\footnotesize\sffamily,
     component/.style={draw=k8sblue, fill=white, rounded corners=4pt, thick, align=center, inner sep=6pt},
     service/.style={draw=succgreen, fill=succgreen!15, rounded corners=4pt, thick, align=center, inner sep=6pt},
     storage/.style={draw=awsorange, fill=awsorange!15, rounded corners=4pt, thick, align=center, inner sep=6pt},
+    dnsbox/.style={draw=purple, fill=purple!10, rounded corners=3pt, dashed, align=center, inner sep=5pt},
+    cfgbox/.style={draw=awsnavy, fill=awsnavy!10, rounded corners=2pt, dashed, align=center, inner sep=5pt},
     arrow/.style={-{Stealth[scale=1.0]}, thick, color=k8sblue}
 ]
 
-    \node[component] (curl) {\textbf{Requisição Externa}\\\texttt{curl /api/reports/daily\_usage}};
-    \node[service, right=of curl] (svc_app) {\textbf{Service Kubernetes}\\Porta 5153 (Porta de Entrada)};
-    \node[component, right=of svc_app] (pod_app) {\textbf{Pod da API (Flask)}\\Executa queries SQL};
-    \node[service, below=1.2cm of pod_app] (svc_db) {\textbf{Service: postgresql}\\Redireciona para o banco (5432)};
-    \node[storage, left=of svc_db] (db) {\textbf{Pod: postgresql-0}\\Tabelas: \texttt{users} e \texttt{tokens}};
+    \node[component] (req) {\textbf{Cliente HTTP}\\\texttt{GET /daily\_usage}};
+    \node[service, right=of req] (svc_app) {\textbf{Service: coworking-analytics}\\ClusterIP (Virtual IP: porta 5153)};
+    \node[component, right=of svc_app] (pod_app) {\textbf{Pod da API (Flask)}\\Processa regras de negócio};
+    
+    \node[cfgbox, above=0.9cm of pod_app] (cfg) {\textbf{ConfigMap \& Secret}\\Injeta \texttt{DB\_HOST=postgresql}, senha e porta};
+    \node[dnsbox, right=of cfg] (dns) {\textbf{CoreDNS do Cluster}\\Traduz ``\texttt{postgresql}'' para IP interno};
 
-    \draw[arrow] (curl) -- (svc_app);
-    \draw[arrow] (svc_app) -- (pod_app);
-    \draw[arrow] (pod_app) -- node[right]{\footnotesize Consulta SQL} (svc_db);
-    \draw[arrow] (svc_db) -- (db);
+    \node[service, below=1.2cm of pod_app] (svc_db) {\textbf{Service: postgresql}\\ClusterIP (TCP: porta 5432)};
+    \node[storage, left=of svc_db] (pod_db) {\textbf{Pod: postgresql-0}\\Executa a query SQL e retorna linhas};
+
+    \draw[arrow] (req) -- node[above]{\footnotesize (1) HTTP 5153} (svc_app);
+    \draw[arrow] (svc_app) -- node[above]{\footnotesize (2) Roteamento} (pod_app);
+    \draw[arrow, dashed] (cfg) -- node[left]{\footnotesize Variáveis} (pod_app);
+    \draw[arrow, dotted] (pod_app) -- node[above]{\footnotesize (3) Consulta DNS} (dns);
+    \draw[arrow] (pod_app) -- node[right]{\footnotesize (4) Query SQL} (svc_db);
+    \draw[arrow] (svc_db) -- node[above]{\footnotesize (5) TCP 5432} (pod_db);
 
 \end{tikzpicture}
 \end{center}
+
+\vspace{0.2cm}
+
+\subsubsection*{Legenda da Rede Interna (Como o App Encontra o Banco)}
+\begin{center}
+\small
+\begin{tabular}{p{0.8cm} p{3.2cm} p{4.2cm} p{7.0cm}}
+\toprule
+\textbf{Passo} & \textbf{Componentes} & \textbf{Papel na Arquitetura} & \textbf{Detalhes Técnicos da Conexão} \\
+\midrule
+\textbf{(1)} & Cliente $\rightarrow$ Service App & Porta de Entrada & A requisição bate no \texttt{Service}, que tem um IP virtual fixo e nunca muda. \\
+\textbf{(2)} & Service App $\rightarrow$ Pod Flask & Balanceador de Carga & O Service usa o seletor (\texttt{app=coworking-analytics}) para repassar a chamada ao Pod saudável. \\
+\textbf{(3)} & Pod Flask $\rightarrow$ CoreDNS & Resolução de Nome & O Flask não sabe o IP do banco; ele pergunta ao DNS interno do k8s onde fica o servidor \texttt{postgresql}. \\
+\textbf{(4)} & Pod Flask $\rightarrow$ Service DB & Conexão SQLAlchemy & O app abre uma sessão PostgreSQL autenticando com usuário e senha recebidos pelo \texttt{Secret}. \\
+\textbf{(5)} & Service DB $\rightarrow$ Pod DB & Execução do Banco & O PostgreSQL executa o \texttt{SELECT Date(created\_at), Count(*) FROM tokens GROUP BY ...} e devolve o JSON. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+---
+
+\section{Como os Componentes se Conectam: O Fio Condutor da Arquitetura}
+
+Para entender profundamente como a infraestrutura opera, vamos analisar a conexão entre cada par de peças:
+
+\subsection{1. Como o Desenvolvedor se conecta ao Cluster EKS}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{O Elo de Ligação:} O arquivo local de configuração \texttt{\textasciitilde/.kube/config}.
+    \item \textbf{Como funciona:} Quando você digita \texttt{kubectl get pods}, o binário do \texttt{kubectl} não conversa magicamente com o servidor. Ele lê o arquivo de configuração, descobre a URL do \textit{API Server} na AWS e executa em segundo plano o comando \texttt{aws eks get-token}. Esse token é assinado pelo serviço de identidade da AWS (STS) com base no seu usuário IAM. O Kubernetes valida a assinatura do token e permite a visualização dos recursos.
+\end{itemize}
+
+\subsection{2. Como o CodeBuild se conecta ao Registro de Imagens (ECR)}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{O Elo de Ligação:} Chaves do IAM e o comando \texttt{docker login}.
+    \item \textbf{Como funciona:} Dentro do arquivo \texttt{buildspec.yml}, executamos:
+    \begin{lstlisting}
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 467369438218.dkr.ecr.us-east-1.amazonaws.com
+    \end{lstlisting}
+    A máquina virtual do CodeBuild utiliza sua \textit{IAM Service Role} para solicitar à AWS uma senha temporária criptografada de acesso ao ECR. Com essa credencial, o comando \texttt{docker push} ganha autorização para gravar a imagem \texttt{coworking-analytics:1.0.0}.
+\end{itemize}
+
+\subsection{3. Como a Aplicação Python encontra o Banco sem saber o IP (Service Discovery)}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{O Elo de Ligação:} O sistema de DNS embutido do Kubernetes (\textbf{CoreDNS}).
+    \item \textbf{Como funciona:} No mundo dos contêineres, os pods morrem e nascem o tempo todo, ganhando IPs dinâmicos diferentes a cada reinício. Como o script Python se conecta a um banco cujo IP muda?
+    
+    A resposta é o objeto \textbf{Service}. Criamos um serviço com o nome exato \texttt{postgresql}. O Kubernetes atribui a esse serviço um nome de domínio interno: \texttt{postgresql.default.svc.cluster.local}. No nosso \texttt{ConfigMap}, declaramos a variável de ambiente:
+    \begin{lstlisting}
+DB_HOST: "postgresql"
+    \end{lstlisting}
+    Quando o driver \texttt{psycopg2} do Python tenta conectar em \texttt{postgresql:5432}, o Kubernetes intercepta a requisição e a encaminha automaticamente para o pod do banco de dados correto.
+\end{itemize}
+
+\subsection{4. Como os Segredos (Senhas) chegam de forma segura ao Python}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{O Elo de Ligação:} Os objetos \textbf{ConfigMap} e \textbf{Secret}.
+    \item \textbf{Como funciona:} Dados não-sensíveis (como nome do banco e porta) foram configurados no \texttt{ConfigMap}. Já a senha do PostgreSQL foi armazenada em um \texttt{Secret} protegido. No arquivo \texttt{deployment.yaml}, usamos a instrução \texttt{secretKeyRef} para ligar a chave do secret diretamente a uma variável de ambiente chamada \texttt{DB\_PASSWORD}. O Python simplesmente lê \texttt{os.environ["DB\_PASSWORD"]}, sem nunca salvar a senha em arquivos de texto ou código-fonte.
+\end{itemize}
 
 ---
 
 \section{A Crônica Detalhada das Etapas (O Que Fizemos e Por Quê)}
 
-A seguir, veja a narrativa real e sem cortes de cada passo percorrido, com as motivações por trás de cada comando:
+A seguir, a narrativa completa de cada etapa executada no projeto:
 
 \subsection{Etapa 1: O Ponto de Partida e o Mistério da AWS sem Chaves}
-\textbf{O que aconteceu:} Ao tentar rodar \texttt{aws sts get-caller-identity} no terminal local, recebemos o erro informando que o comando não existia. Depois de instalá-lo, surgiu o erro \textit{``Unable to locate credentials''}.\\
-\textbf{A explicação didática:} O utilitário \textbf{AWS CLI} é apenas o ``telefone'' que você usa para falar com os servidores da Amazon. Mas antes de a Amazon atender suas ordens, ela precisa saber quem está ligando. As variáveis de ambiente (\texttt{AWS\_ACCESS\_KEY\_ID}, \texttt{AWS\_SECRET\_ACCESS\_KEY} e \texttt{AWS\_SESSION\_TOKEN}) são como o seu crachá e senha temporária de acesso ao prédio da AWS. Uma vez exportadas no terminal, a AWS nos reconheceu imediatamente.
+\textbf{O desafio:} Ao rodar \texttt{aws sts get-caller-identity} no terminal local, recebemos o erro informando que o comando não existia. Após instalá-lo, surgiu a mensagem \textit{``Unable to locate credentials''}.\\
+\textbf{A explicação:} O comando \textbf{AWS CLI} é apenas o canal de comunicação com os datacenters da AWS. Mas antes de qualquer ação, a AWS exige comprovação de identidade. As variáveis exportadas no terminal (\texttt{AWS\_ACCESS\_KEY\_ID}, \texttt{AWS\_SECRET\_ACCESS\_KEY} e \texttt{AWS\_SESSION\_TOKEN}) agem como um crachá de segurança com foto e chave magnética. Com elas ativas, a AWS respondeu imediatamente reconhecendo a nossa conta.
 
 \subsection{Etapa 2: Erguendo a Cidade do Kubernetes com \texttt{eksctl}}
-\textbf{O que aconteceu:} Executamos o comando:
+\textbf{O desafio:} Executamos o comando de criação do cluster:
 \begin{lstlisting}
 eksctl create cluster --name my-cluster --region us-east-1 --nodegroup-name my-nodes --node-type t3.small --nodes 1
 \end{lstlisting}
-O comando levou cerca de 18 minutos rodando silenciosamente no terminal.\\
-\textbf{A explicação didática:} Uma dúvida natural foi: \textit{``esse comando fica rodando para sempre?''}. Não! Ele demorou porque o \texttt{eksctl} não instalou um simples programa; ele desenhou e ergueu uma infraestrutura inteira do zero na nuvem da AWS via CloudFormation:
+O comando executou por 18 minutos ininterruptos.\\
+\textbf{A explicação:} Ele não estava travado; estava provisionando uma infraestrutura completa do zero por meio de automação do CloudFormation:
 \begin{enumerate}
-    \item Criou uma \textbf{VPC} (uma rede privada isolada no datacenter da AWS em Virgínia do Norte).
-    \item Criou sub-redes públicas e privadas com tabelas de roteamento e regras de firewall.
-    \item Provisionou o \textbf{Control Plane} do Kubernetes (os servidores mestres que tomam decisões).
-    \item Criou uma máquina virtual EC2 (\texttt{t3.small}) como nó operário (\textit{worker node}).
+    \item Criou a \textbf{VPC}: uma rede privada e segura no datacenter da AWS em Virgínia.
+    \item Criou sub-redes e tabelas de roteamento com firewalls gerenciados.
+    \item Inicializou os servidores mestres de alta disponibilidade (\textbf{Control Plane}).
+    \item Subiu uma instância virtual EC2 (\texttt{t3.small}) como nó operário (\textit{worker node}).
 \end{enumerate}
-Ao final, o \texttt{eksctl} salvou o arquivo \texttt{\textasciitilde/.kube/config}, que funciona como a chave mestra para que o comando \textbf{\texttt{kubectl}} possa controlar o cluster do nosso terminal.
+Ao término, o \texttt{eksctl} gerou a chave \texttt{\textasciitilde/.kube/config}, habilitando o comando \texttt{kubectl} a gerenciar o cluster a partir do terminal.
 
 \subsection{Etapa 3: Criando e Populando o Banco de Dados com Helm}
-\textbf{O que aconteceu:} Subimos um PostgreSQL com o comando \texttt{helm install postgresql bitnami/postgresql} e em seguida populamos as tabelas com os scripts \texttt{1\_create\_tables.sql}, \texttt{2\_seed\_users.sql} e \texttt{3\_seed\_tokens.sql}.\\
-\textbf{A explicação didática:} Para um analista, banco de dados é a alma do projeto. Em vez de criarmos manualmente máquinas para o banco, o \textbf{Helm} aplicou uma receita pronta da Bitnami. O banco gerou uma senha aleatória que ficou guardada em um objeto seguro do Kubernetes chamado \textbf{Secret}.\\
-\textit{O obstáculo do caminho:} Quando tentamos conectar na porta \texttt{5432} via \textit{port-forward}, a senha falhava porque a máquina local já tinha outro PostgreSQL instalado ocupando a porta \texttt{5432}. Resolvemos isso de forma elegante: injetamos os arquivos SQL diretamente para dentro do contêiner do banco usando o comando \texttt{kubectl exec}, sem sofrer interferência da rede local.
+\textbf{O desafio:} Instalamos o PostgreSQL via \texttt{helm install postgresql bitnami/postgresql} e populamos o banco com os scripts SQL de tabelas, usuários e tokens.\\
+\textbf{A explicação:} O \textbf{Helm} aplicou uma receita pronta de banco de dados, configurando o armazenamento e criando uma senha aleatória no \texttt{Secret}. Quando tentamos conectar via porta local \texttt{5432}, ocorreu falha de autenticação porque o computador já possuía outro PostgreSQL rodando localmente na mesma porta. Resolvemos isso injetando os scripts SQL diretamente para dentro do pod do banco na nuvem com o comando \texttt{kubectl exec}, eliminando qualquer interferência da máquina local.
 
 \subsection{Etapa 4: Empacotando o Python no Docker e o Bug Oculto do Flask}
-\textbf{O que aconteceu:} Criamos o \texttt{Dockerfile} baseado em \texttt{python:3.10-slim} e o enviamos para o cluster. Mas ao analisar os logs do pod com \texttt{kubectl logs}, nos deparamos com:
+\textbf{O desafio:} Criamos o \texttt{Dockerfile} com \texttt{python:3.10-slim}. Nos testes dentro do pod, a aplicação quebrou com o erro:
 \begin{lstlisting}
 ImportError: cannot import name 'url_quote' from 'werkzeug.urls'
 \end{lstlisting}
-\textbf{A explicação didática:} Este é um problema clássico de projetos de dados: o arquivo \texttt{requirements.txt} original dizia apenas \texttt{flask==2.2.2}. Como a biblioteca auxiliar \texttt{Werkzeug} não tinha versão travada, o pip baixou a versão mais nova (\texttt{Werkzeug 3.0}), que apagou uma função antiga que o Flask esperava. Corrigimos adicionando \texttt{Werkzeug==2.2.2}, garantindo reprodutibilidade matemática das dependências.
+\textbf{A explicação:} O arquivo \texttt{requirements.txt} pedia apenas \texttt{flask==2.2.2}. Sem versão fixada para a biblioteca dependente \texttt{Werkzeug}, o pip instalou a versão mais recente (\texttt{Werkzeug 3.0}), que removeu a função \texttt{url\_quote} que o Flask esperava. Fixamos a dependência em \texttt{Werkzeug==2.2.2}, garantindo estabilidade e reprodutibilidade da imagem Docker.
 
 \subsection{Etapa 5: Automatizando a Nuvem com GitHub e AWS CodeBuild}
-\textbf{O que aconteceu:} Configuramos o arquivo \texttt{buildspec.yml} e conectamos nosso repositório GitHub ao serviço \textbf{AWS CodeBuild}.\\
-\textbf{A explicação didática:} O CodeBuild atua como um assistente de fábrica. Toda vez que iniciamos a compilação, ele aciona uma máquina virtual na AWS, lê as instruções do \texttt{buildspec.yml}, constrói a imagem Docker, adiciona as etiquetas de versão (\texttt{1.0.0} e \texttt{latest}) e publica a imagem no \textbf{AWS ECR}. A partir desse momento, qualquer servidor do nosso cluster tem acesso direto à imagem oficial da aplicação.
+\textbf{O desafio:} Criamos o arquivo de pipeline \texttt{buildspec.yml} e o vinculamos ao \textbf{AWS CodeBuild}.\\
+\textbf{A explicação:} O CodeBuild é o robô de fábrica da AWS. A cada execução, ele sobe uma máquina efêmera, autentica no ECR, compila o \texttt{Dockerfile}, tagueia a imagem com versionamento semântico (\texttt{1.0.0} e \texttt{latest}) e a envia ao armazém \textbf{AWS ECR}, deixando-a pronta para ser consumida pelo Kubernetes.
 
 \subsection{Etapa 6: O Mistério do Pod que Não Ficava Pronto (Readiness Probe)}
-\textbf{O que aconteceu:} Após o build, o comando \texttt{kubectl rollout status} ficou travado com a mensagem: \textit{``1 old replicas are pending termination...''}, e o pod novo aparecia como \texttt{0/1 Running}.\\
-\textbf{A explicação didática:} No Kubernetes, um pod não recebe clientes só porque começou a rodar. O Kubernetes possui ``sensores médicos'' chamados \textbf{Probes}:
-\begin{itemize}
-    \item \textbf{Liveness Probe:} Pergunta se a aplicação está viva. Se responder não, o Kubernetes mata e recria o pod.
-    \item \textbf{Readiness Probe:} Pergunta: \textit{``Você já está pronto para receber tráfego de clientes?''}.
-\end{itemize}
-Nosso manifesto verificava a rota \texttt{/readiness\_check}, mas dentro do código Python ela tentava fazer \texttt{db.session.query(Token).count()} sem a classe \texttt{Token} existir, devolvendo erro 500. Como o pod novo nunca dizia ``estou pronto'', o Kubernetes recusava-se a desligar o pod antigo para evitar que os usuários ficassem sem sistema! Corrigimos o sensor para apontar para a rota funcional \texttt{/health\_check}, e o pod imediatamente assumiu o status \textbf{1/1 Ready}.
+\textbf{O desafio:} O comando \texttt{kubectl rollout status} permaneceu bloqueado com a mensagem \textit{``1 old replicas are pending termination...''}, enquanto o novo pod ficava em \texttt{0/1 Running}.\\
+\textbf{A explicação:} O Kubernetes possui sensores médicos chamados \textbf{Probes}. O \textbf{Readiness Probe} pergunta continuamente: \textit{``Você já está pronto para receber requisições de clientes?''}. Nosso manifesto original testava a rota \texttt{/readiness\_check}, que continha um erro de código Python ao tentar buscar um modelo \texttt{Token} inexistente, devolvendo status HTTP 500. Como o novo pod nunca dizia estar pronto, o Kubernetes recusava-se a desligar a réplica antiga para proteger os usuários. Ajustamos o probe para a rota saudável \texttt{/health\_check}, e o pod alcançou o status \textbf{1/1 Ready} instantaneamente.
 
 \subsection{Etapa 7: O Gran Finale -- Relatórios de Negócio Respondendo 100\%}
-\textbf{O que aconteceu:} Abrimos o túnel na porta 5153 e executamos as consultas HTTP. Encontramos um último detalhe na rota \texttt{/api/reports/daily\_usage} (onde estava escrito \texttt{jsonify(get\_daily\_visits)} sem os parênteses da função, gerando erro 500). Corrigido para \texttt{jsonify(get\_daily\_visits())}, as duas rotas responderam instantaneamente:
+\textbf{O desafio:} Abrimos a porta 5153 e disparamos requisições de teste. Após adicionar parênteses em \texttt{get\_daily\_visits()} no \texttt{app.py}, ambas as rotas retornaram dados completos:
 \begin{lstlisting}[language=json]
 {"2023-02-07":40,"2023-02-08":202,"2023-02-09":179,"2023-02-10":158,...}
 \end{lstlisting}
-O microsserviço consultou os 500 registros de check-ins no PostgreSQL e entregou a agregação em JSON puro para consumo dos analistas!
+O microsserviço consultou com sucesso os 500 usuários e tokens no PostgreSQL e entregou os relatórios analíticos em JSON formatado!
 
 ---
 
 \section{Decisões de Engenharia e Boas Práticas (Standout Topics)}
 
 \begin{tcolorbox}[colback=white,colframe=tipcolor,title=\textbf{1. Por que definir Requests e Limits de CPU e Memória?},fonttitle=\bfseries]
-Em análise de dados, um script mal dimensionado pode tentar carregar um dataset de 10 GB na memória e travar o computador inteiro. No Kubernetes evitamos isso com:
+Em análise de dados, uma consulta pesada sem filtro pode consumir toda a memória RAM e travar o servidor inteiro. No Kubernetes prevenimos isso com:
 \begin{itemize}
-    \item \textbf{Requests (\texttt{cpu: 100m, memory: 64Mi}):} É o ``bilhete mínimo'' que o pod precisa para entrar no ônibus (servidor). Garante que a aplicação sempre tenha recursos reservados.
-    \item \textbf{Limits (\texttt{cpu: 250m, memory: 256Mi}):} É o ``teto de gastos''. Se o contêiner tentar usar mais de 256 MB de RAM, o Kubernetes o freia antes que ele prejudique os outros pods da máquina.
+    \item \textbf{Requests (\texttt{cpu: 100m, memory: 64Mi}):} É a reserva garantida mínima para o pod funcionar.
+    \item \textbf{Limits (\texttt{cpu: 250m, memory: 256Mi}):} É o teto máximo. Se o pod tentar usar mais de 256 MB de RAM, o Kubernetes impede o vazamento de memória antes que ele afete os outros contêineres do nó.
 \end{itemize}
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=white,colframe=awsnavy,title=\textbf{2. Escolha da Instância EC2: Por que a família Graviton (t4g)?},fonttitle=\bfseries]
-Recomendamos instâncias do tipo \textbf{\texttt{t4g.small}}. Elas utilizam os processadores \textbf{AWS Graviton2}, desenhados pela própria Amazon com arquitetura ARM (semelhante aos chips de celulares modernos e Macs Apple Silicon). Elas entregam cerca de \textbf{40\% mais velocidade} consumindo menos energia e com um \textbf{custo 20\% menor} que instâncias convencionais Intel/AMD.
+Recomendamos a instância \textbf{\texttt{t4g.small}}. Equipada com os processadores proprietários \textbf{AWS Graviton2} (arquitetura ARM64), ela entrega até \textbf{40\% mais performance} computacional com um \textbf{custo 20\% menor} em relação às instâncias x86 tradicionais, sendo perfeita para APIs web leves e relatórios analíticos.
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=white,colframe=succgreen,title=\textbf{3. Como Economizar Dinheiro Real na AWS?},fonttitle=\bfseries]
 \begin{enumerate}
-    \item \textbf{Instâncias Spot:} A AWS leiloa servidores ociosos com descontos de até 90\%. Para ambientes de homologação ou tarefas batch de dados, usar instâncias Spot com a ferramenta \textit{Karpenter} reduz drasticamente a fatura no fim do mês.
-    \item \textbf{Autoescalabilidade Inteligente (HPA):} Durante o horário comercial a empresa tem muitos analistas gerando relatórios (o Kubernetes sobe 5 réplicas do pod). À noite, ele reduz para apenas 1 pod, economizando infraestrutura.
+    \item \textbf{Instâncias Spot com Karpenter:} A AWS oferece servidores ociosos com até 90\% de desconto. Para tarefas analíticas e ambientes de teste, usar instâncias Spot reduz dramaticamente os custos.
+    \item \textbf{Autoescalabilidade (HPA):} Permite que o cluster aumente o número de réplicas durante o pico de uso comercial e encolha para apenas 1 pod nos finais de semana e noites.
 \end{enumerate}
 \end{tcolorbox}
 
 ---
 
-\section{Conclusão da Jornada}
+\section{Conclusão}
 
-O que começou como um punhado de scripts locais transformou-se em uma arquitetura moderna de microsserviços na nuvem. Compreender esses passos permite ao profissional de dados transitar com confiança entre a extração de \textit{insights} e a engenharia robusta que sustenta os produtos em escala mundial.
+Ao entender como cada componente se conecta — através de redes internas, resolução DNS, autenticações IAM e orquestração Kubernetes —, a distância entre o analista que escreve a query SQL e a infraestrutura em nuvem desaparece, viabilizando soluções seguras, eficientes e escaláveis.
 
 \end{document}
