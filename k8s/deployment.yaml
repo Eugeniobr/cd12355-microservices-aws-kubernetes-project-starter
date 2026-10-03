@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coworking-analytics
+  labels:
+    app: coworking-analytics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coworking-analytics
+  template:
+    metadata:
+      labels:
+        app: coworking-analytics
+    spec:
+      containers:
+      - name: coworking-analytics
+        image: 467369438218.dkr.ecr.us-east-1.amazonaws.com/coworking-analytics:1.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5153
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: coworking-analytics-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: coworking-analytics-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: coworking-analytics-config
+              key: DB_NAME
+        - name: DB_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: coworking-analytics-config
+              key: DB_USERNAME
+        - name: APP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: coworking-analytics-config
+              key: APP_PORT
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql
+              key: postgres-password
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health_check
+            port: 5153
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health_check
+            port: 5153
+          initialDelaySeconds: 15
+          periodSeconds: 10
