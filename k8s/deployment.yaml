@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: coworking-analytics
-        image: 467369438218.dkr.ecr.us-east-1.amazonaws.com/coworking-analytics:1.0.0
+        image: 467369438218.dkr.ecr.us-east-1.amazonaws.com/coworking-analytics:1.1.0
         imagePullPolicy: Always
         ports:
         - containerPort: 5153

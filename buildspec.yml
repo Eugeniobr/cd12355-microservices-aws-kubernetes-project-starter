@@ -6,7 +6,7 @@ phases:
       - echo Fazendo login no Amazon ECR...
       - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com
       - REPOSITORY_URI=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com/coworking-analytics
-      - IMAGE_TAG=1.0.0
+      - IMAGE_TAG=1.1.0
   build:
     commands:
       - echo Build iniciado em `date`
